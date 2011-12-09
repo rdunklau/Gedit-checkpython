@@ -94,7 +94,7 @@ class PyFlakesChecker(PyChecker):
 
     def check(self, name, content):
         old_stderr, sys.stderr = sys.stderr, StringIO.StringIO()
-        name, content = self._get_all_text()
+        content = content + '\n'
         try:
             tree = ast.parse(content, name)
         except:
@@ -103,12 +103,12 @@ class PyFlakesChecker(PyChecker):
                 lineno, offset, line = value[1][1:]
             except IndexError:
                 lineno, offset, line = 1, 0, ''
-            yield Message(ERROR, 'E', lineno, value, offset)
+            yield Message(ERROR, 'E', lineno, str(value), offset)
         else:
             messages = flakeschecker.Checker(tree, name).messages
+            for w in messages:
+                yield Message(ERROR, 'E', w.lineno,
+                    '%s' % (w.message % w.message_args),
+                    getattr(w, 'col', 0))
         finally:
             sys.stderr = old_stderr
-        for w in messages:
-            import pdb
-            pdb.set_trace()
-            yield Message()
