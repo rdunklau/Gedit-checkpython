@@ -1,0 +1,24 @@
+Gedit Python checker
+
+A simple gedit plugin for checking python files.
+Currently checks:
+  - pep8 conformance with the pep8 module
+  - basic checks using pyflakes
+
+
+Installation
+
+You will need both the pep8 and pyflakes modules, available from pypi.
+
+```
+  pip install pyflakes
+  pip install pep8
+```
+
+Copy (or clone) this repository in your gedit plugins directory (create it if it
+does not exists):
+
+```
+  cd ~/.local/share/gedit/plugins/
+  git clone git@github.com:rdunklau/Gedit-checkpython.git
+```
