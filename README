@@ -20,5 +20,14 @@ does not exists):
 
 ```
   cd ~/.local/share/gedit/plugins/
+  git clone https://github.com/rdunklau/Gedit-checkpython.git
+```
+You may also try cloning via git or ssh:
+```
+  git clone git://github.com/rdunklau/Gedit-checkpython.git
+```
+or
+```
   git clone git@github.com:rdunklau/Gedit-checkpython.git
 ```
+
