@@ -2,8 +2,7 @@ import os
 
 from gi.repository import GObject, Gedit, Gtk, GdkPixbuf
 
-from .checkers import Pep8Checker, PyFlakesChecker
-from . import checkers
+import checkers
 
 
 UI_XML = """<ui>
@@ -28,7 +27,7 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
 
     def do_activate(self):
         # TODO: make this configurable
-        self.checkers = [Pep8Checker(), PyFlakesChecker()]
+        self.checkers = [checkers.Pep8Checker(), checkers.PyFlakesChecker()]
         self.init_ui()
         handler = self.window.connect("tab-added", self.on_tab_added)
         handler = self.window.connect("active-tab-changed", self.on_tab_added)
@@ -93,6 +92,7 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
     def check_all(self, action, data=None):
         self.error_list.clear()
         name, content = self._get_all_text()
+        self.window.get_side_panel().set_property('visible', True)
         for checker in self.checkers:
             for message in checker.check(name, content):
                 self.error_list.append_message(message)
@@ -101,8 +101,8 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
         view = self.window.get_active_view()
         if view:
             doc = self.window.get_active_document()
-            begin = doc.get_iter_at_line(0)
-            end = doc.get_iter_at_line(doc.get_line_count())
+            begin = doc.get_start_iter()
+            end = doc.get_end_iter()
             content = view.get_buffer().get_text(begin, end, False)
             name = view.get_buffer().\
                 get_short_name_for_display()

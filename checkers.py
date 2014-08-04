@@ -5,7 +5,7 @@ import pep8
 import re
 
 import sys
-import StringIO
+from io import StringIO
 
 from optparse import OptionParser
 from pyflakes import checker as flakeschecker
@@ -60,15 +60,13 @@ class Pep8Checker(PyChecker):
         pep8.options.repeat = True
         pep8.options.verbose = 0
         pep8.options.counters = dict.fromkeys(pep8.BENCHMARK_KEYS, 0)
-        pep8.options.physical_checks = pep8.find_checks('physical_line')
-        pep8.options.logical_checks = pep8.find_checks('logical_line')
         pep8.options.messages = {}
 
 
     def check(self, name, content):
-        lines = ['%s\n' % line for line in content.split('\n')]
-        old_stderr, sys.stderr = sys.stderr, StringIO.StringIO()
-        old_stdout, sys.stdout = sys.stdout, StringIO.StringIO()
+        lines = content.splitlines(True)
+        old_stderr, sys.stderr = sys.stderr, StringIO()
+        old_stdout, sys.stdout = sys.stdout, StringIO()
         try:
             pep8.Checker(name, lines=lines).check_all()
         except:
@@ -93,14 +91,14 @@ class PyFlakesChecker(PyChecker):
     """A pyflakes checker."""
 
     def check(self, name, content):
-        old_stderr, sys.stderr = sys.stderr, StringIO.StringIO()
+        old_stderr, sys.stderr = sys.stderr, StringIO()
         content = content + '\n'
         try:
             tree = ast.parse(content, name)
         except:
             try:
                 value = sys.exc_info()[1]
-                lineno, offset, line = value[1][1:]
+                lineno, offset, line = value.args[1][1:]
             except IndexError:
                 lineno, offset, line = 1, 0, ''
             yield Message(ERROR, 'E', lineno, str(value), offset)

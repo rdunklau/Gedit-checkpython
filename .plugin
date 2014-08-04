@@ -1,10 +1,10 @@
 [Plugin]
-Loader=python
+Loader=python3
 Module=gedit_checkpython
 IAge=3
 Name=Check Python
 Description=A pep8 conformance and Pyflakes checker
-Authors=Ronan Dunklau
-Copyright=Copyright © 2011 Ronan Dunklau
-Website=http://kozea.fr
-Version=0.0.1
+Authors=Ronan Dunklau, migration to Python3 by Jacek Pliszka
+Copyright=GPLv2
+Website=https://github.com/rdunklau/Gedit-checkpython
+Version=0.0.2
