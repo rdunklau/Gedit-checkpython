@@ -1,5 +1,3 @@
-import os
-
 from gi.repository import GObject, Gedit, Gtk, GdkPixbuf
 
 import checkers
@@ -9,8 +7,12 @@ UI_XML = """<ui>
 <menubar name="MenuBar">
     <menu name="ToolsMenu" action="Tools">
       <placeholder name="ToolsOps_3">
-        <menuitem name="Pep8ConformanceCheckAction"
-        action="Pep8ConformanceCheckAction"/>
+        <menu name="PEP8menu" action="PEP8menu">
+            <menuitem name="Pep8ConformanceCheckAction"
+                action="Pep8ConformanceCheckAction"/>
+            <menuitem name="Pep8ConformanceAutoCheckEnabled"
+                action="Pep8ConformanceAutoCheckEnabled"/>
+        </menu>
       </placeholder>
     </menu>
 </menubar>
@@ -20,6 +22,7 @@ UI_XML = """<ui>
 class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
     __gtype_name = 'Pep8Plugin'
     window = GObject.property(type=Gedit.Window)
+    default_autocheck = True
 
     def __init__(self):
         super(Pep8Plugin, self).__init__()
@@ -59,15 +62,26 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
     def init_ui(self):
         self._init_menu()
         self._init_error_list()
+        
+    def toggle_autocheck(self, action):
+        pass
 
     def _init_menu(self):
         manager = self.window.get_ui_manager()
         self._actions = Gtk.ActionGroup('Pep8Actions')
         self._actions.add_actions([
+            ('PEP8menu', Gtk.STOCK_INFO, "Python check",None, 
+             "This is a submenu", None),
             ('Pep8ConformanceCheckAction', Gtk.STOCK_INFO,
-                'Check pep8 conformance', None,
+                'Check now',"<control><shift>e",
                 'Check pep8 conformance of the current document',
                 self.check_all)])
+
+        self.autocheck = Gtk.ToggleAction("Pep8ConformanceAutoCheckEnabled", 
+                                 "Check automatically", None, None)
+        self.autocheck.set_active(self.default_autocheck)
+        self.autocheck.connect("toggled", self.toggle_autocheck)
+        self._actions.add_action(self.autocheck)  
         manager.insert_action_group(self._actions)
         self._ui_merge_id = manager.add_ui_from_string(UI_XML)
         manager.ensure_update()
@@ -85,9 +99,10 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
         self.error_list.show_all()
 
     def on_document_save(self, document, *args, **kwargs):
-        lang = document.get_language()
-        if lang and lang.get_name() == 'Python':
-            self.check_all(None)
+        if self.autocheck.get_active():
+            lang = document.get_language()
+            if lang and lang.get_name() == 'Python':
+                self.check_all(None)
 
     def check_all(self, action, data=None):
         self.error_list.clear()

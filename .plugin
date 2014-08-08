@@ -7,4 +7,4 @@ Description=A pep8 conformance and Pyflakes checker
 Authors=Ronan Dunklau, migration to Python3 by Jacek Pliszka
 Copyright=GPLv2
 Website=https://github.com/rdunklau/Gedit-checkpython
-Version=0.0.2
+Version=0.0.3
