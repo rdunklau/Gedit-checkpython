@@ -22,7 +22,7 @@ UI_XML = """<ui>
 class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
     __gtype_name = 'Pep8Plugin'
     window = GObject.property(type=Gedit.Window)
-    default_autocheck = True
+    default_autocheck = False
 
     def __init__(self):
         super(Pep8Plugin, self).__init__()
@@ -62,7 +62,7 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
     def init_ui(self):
         self._init_menu()
         self._init_error_list()
-        
+
     def toggle_autocheck(self, action):
         pass
 
@@ -70,18 +70,20 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
         manager = self.window.get_ui_manager()
         self._actions = Gtk.ActionGroup('Pep8Actions')
         self._actions.add_actions([
-            ('PEP8menu', Gtk.STOCK_INFO, "Python check",None, 
+            ('PEP8menu', Gtk.STOCK_INFO, "Python check", None,
              "This is a submenu", None),
             ('Pep8ConformanceCheckAction', Gtk.STOCK_INFO,
-                'Check now',"<control><shift>e",
+                'Check now', "<control><shift>e",
                 'Check pep8 conformance of the current document',
                 self.check_all)])
 
-        self.autocheck = Gtk.ToggleAction("Pep8ConformanceAutoCheckEnabled", 
-                                 "Check automatically", None, None)
+        self.autocheck = Gtk.ToggleAction(
+            "Pep8ConformanceAutoCheckEnabled",
+            "Check automatically", None, None,
+        )
         self.autocheck.set_active(self.default_autocheck)
         self.autocheck.connect("toggled", self.toggle_autocheck)
-        self._actions.add_action(self.autocheck)  
+        self._actions.add_action(self.autocheck)
         manager.insert_action_group(self._actions)
         self._ui_merge_id = manager.add_ui_from_string(UI_XML)
         manager.ensure_update()
@@ -93,8 +95,7 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
         sw = Gtk.ScrolledWindow()
         sw.add(self.error_list)
         self.error_list.connect("row-activated", self.on_row_click)
-        panel.add_item(sw, "Pep 8 conformance", "Pep8 conformance",
-                icon)
+        panel.add_item(sw, "Pep 8 conformance", "Pep8 conformance", icon)
         panel.activate_item(sw)
         self.error_list.show_all()
 
@@ -130,17 +131,21 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
         line_iter = doc.get_iter_at_line(lineno[2] - 1)
         self.window.get_active_view().get_buffer().place_cursor(line_iter)
         self.window.get_active_view().scroll_to_iter(
-                line_iter, 0, False, 0, 0.3)
+            line_iter, 0, False, 0, 0.3)
 
 
 class ErrorListView(Gtk.TreeView):
 
     def __init__(self):
         super(ErrorListView, self).__init__()
-        self.set_model(Gtk.ListStore(GdkPixbuf.Pixbuf,  # type
-                                    GObject.TYPE_STRING,  # code
-                                    GObject.TYPE_INT,  # line
-                                    GObject.TYPE_STRING))  # message
+        self.set_model(
+            Gtk.ListStore(
+                GdkPixbuf.Pixbuf,  # type
+                GObject.TYPE_STRING,  # code
+                GObject.TYPE_INT,  # line
+                GObject.TYPE_STRING,  # message
+            )
+        )
 
         self.set_headers_visible(True)
 
@@ -171,14 +176,16 @@ class ErrorListView(Gtk.TreeView):
         message_column.add_attribute(message_cell, "text", 3)
         self.set_common_column_properties(message_column, 3)
         self._icons = {
-                checkers.ERROR: self._get_icon_as_pixbuf('dialog-error'),
-                checkers.WARNING: self._get_icon_as_pixbuf('dialog-warning'),
-                checkers.STYLE: self._get_icon_as_pixbuf('dialog-information')
+            checkers.ERROR: self._get_icon_as_pixbuf('dialog-error'),
+            checkers.WARNING: self._get_icon_as_pixbuf('dialog-warning'),
+            checkers.STYLE: self._get_icon_as_pixbuf('dialog-information')
         }
 
     def _get_icon_as_pixbuf(self, icon):
-        return Gtk.IconTheme.load_icon(Gtk.IconTheme.get_default(),
-                icon, 16, 0)
+        return Gtk.IconTheme.load_icon(
+            Gtk.IconTheme.get_default(),
+            icon, 16, 0,
+        )
 
     def set_common_column_properties(self, column, idx):
         column.set_resizable(True)

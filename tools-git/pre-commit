@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+
+# TODO jak nie weryfikowac nie naszego kodu
+#  a) list aplikow z wykluczeniam
+#  b) rozpoznaje po git blame czyj kod
+
+import os
+import subprocess
+import sys
+import re
+
+
+us = {
+    b'not.committed.yet',
+}
+
+regitblame = re.compile(
+    rb'\S+\s\(<(?P<email>[^>]+)[^)]+\s(?P<lineno>\d+)(?P<rest>.*)'
+)
+
+sys.path.insert(
+    0,
+    os.environ['HOME']+'/.local/share/gedit/plugins/Gedit-checkpython'
+)
+
+from checkers import AllCheckers
+
+
+def cmd_stdout(cmd):
+    pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    outb = pipe.communicate()[0]
+    pipe.wait()
+    return outb
+
+
+def cmd_stdout_nonempty_list(cmd):
+    return [
+        i
+        for i in cmd_stdout(cmd).split(b'\n')
+        if i
+    ]
+
+checker = AllCheckers(pep8ignore=['W391'])
+filelist = [
+    i
+    for i in cmd_stdout_nonempty_list(
+        ['git', 'diff', '--staged', '--name-only']
+    )
+    if i.endswith(b'.py')
+]
+
+errors = {}
+for fname, message in checker.check_list_of_files(filelist):
+    line = message.line
+    errors.setdefault(fname, {}).setdefault(line, []).append(
+        (message.err_code, message.message)
+    )
+
+blame = {}
+for fname in errors:
+    blame_lines = cmd_stdout_nonempty_list(['git', 'blame', '-e', fname])
+    for line in blame_lines:
+        m = regitblame.match(line)
+        if not m:
+            continue
+        d = m.groupdict()
+        if d['email'] not in us:
+            continue
+        lineno = int(d['lineno'])
+        blame.setdefault(fname, set()).add(lineno)
+
+for fname in list(errors):
+    if fname not in blame:
+        del(errors[fname])
+    for lineno in list(errors[fname]):
+        if lineno not in blame[fname]:
+            del(errors[fname][lineno])
+
+if not errors:
+    sys.exit(0)
+
+print(" *** Files in the commit do not pass PEP8/pylint validation ***")
+
+for fname in sorted(errors):
+    for lineno in sorted(errors[fname]):
+        for message in errors[fname][lineno]:
+            print("{0}:{1} {2[0]} {2[1]}".format(
+                fname.decode('utf8'),
+                lineno,
+                message
+            ))
+
+sys.exit(1)
+

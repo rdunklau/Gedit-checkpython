@@ -5,6 +5,13 @@ Currently checks:
   - pep8 conformance with the pep8 module
   - basic checks using pyflakes
 
+There is also git pre-commit hook in tools-git directory which validates PEP8/pylint
+code in similar way as this plugin with two differences:
+1. it validates all committed .py files
+2. empty ending line is not validated
+3. blame for each line is checked and is reported only if the person is 
+on given list
+
 
 Installation
 
@@ -31,3 +38,6 @@ or
   git clone git@github.com:rdunklau/Gedit-checkpython.git
 ```
 
+Pre-commit hook installation:
+
+ln -s ~/.local/share/gedit/plugins/Gedit-checkpython/tools-git/pre-commit {MyProjectDirectory}/.git/hooks/

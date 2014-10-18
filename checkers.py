@@ -44,16 +44,29 @@ class PyChecker(object):
         """
         pass
 
+    def check_by_filename(self, filename):
+        yield from self.check(
+            filename,
+            open(filename, 'r').read()
+        )
+
+    def check_list_of_files(self, filelist):
+        for filename in filelist:
+            for message in self.check_by_filename(filename):
+                yield filename, message
+
 
 class Pep8Checker(PyChecker):
     """A checker for the Pep8."""
 
-    def __init__(self):
-        # TODO: make this configurable
+    def __init__(self, ignore=[]):
+        self.options = pep8.StyleGuide().options
+        self.options.ignore += tuple(ignore)
+
+        # TODO: make this configurable - below are probably not used at all
         pep8.options = OptionParser()
         pep8.options.count = 1
         pep8.options.select = []
-        pep8.options.ignore = []
         pep8.options.show_source = False
         pep8.options.show_pep8 = False
         pep8.options.quiet = 0
@@ -62,13 +75,12 @@ class Pep8Checker(PyChecker):
         pep8.options.counters = dict.fromkeys(pep8.BENCHMARK_KEYS, 0)
         pep8.options.messages = {}
 
-
     def check(self, name, content):
         lines = content.splitlines(True)
         old_stderr, sys.stderr = sys.stderr, StringIO()
         old_stdout, sys.stdout = sys.stdout, StringIO()
         try:
-            pep8.Checker(name, lines=lines).check_all()
+            pep8.Checker(name, lines=lines, options=self.options).check_all()
         except:
             pass
         finally:
@@ -76,10 +88,12 @@ class Pep8Checker(PyChecker):
             sys.stdout, result = old_stdout, sys.stdout
         result.seek(0)
         pep8regexpr = r'([^:]*):(\d*):(\d*): (\w\d*) (.*)'
-        errors = sorted([re.match(pep8regexpr, line)
-            for line in result.readlines() if line],
-            key=lambda x: x.group(2))
-        for match in errors:
+        errors = [
+            re.match(pep8regexpr, line)
+            for line in result.readlines()
+            if line
+        ]
+        for match in sorted(errors, key=lambda x: x.group(2)):
             lineno = int(match.group(2))
             text = match.group(5)
             col = int(match.group(3) or -1)
@@ -105,8 +119,26 @@ class PyFlakesChecker(PyChecker):
         else:
             messages = flakeschecker.Checker(tree, name).messages
             for w in messages:
-                yield Message(ERROR, 'E', w.lineno,
+                yield Message(
+                    ERROR,
+                    'E',
+                    w.lineno,
                     '%s' % (w.message % w.message_args),
-                    getattr(w, 'col', 0))
+                    getattr(w, 'col', 0)
+                )
         finally:
             sys.stderr = old_stderr
+
+
+class AllCheckers(PyChecker):
+
+    def __init__(self, pep8ignore=[]):
+        self.checkers = [
+            Pep8Checker(ignore=list(pep8ignore)),
+            PyFlakesChecker(),
+        ]
+
+    def check(self, name, content):
+        for checker in self.checkers:
+            yield from checker.check(name, content)
+
