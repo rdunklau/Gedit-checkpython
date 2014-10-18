@@ -94,5 +94,6 @@ for fname in sorted(errors):
                 message
             ))
 
+print("gedit {}".format(b" ".join(errors).decode('utf8')))
 sys.exit(1)
 
