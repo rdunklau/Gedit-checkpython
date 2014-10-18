@@ -9,9 +9,11 @@ import subprocess
 import sys
 import re
 
-
+# lines by persons below are taken into account
+# other lines are skipped
 us = {
     b'not.committed.yet',
+    b'Mickey.Mouse@fairytale.land'
 }
 
 regitblame = re.compile(
@@ -75,6 +77,8 @@ for fname in list(errors):
     for lineno in list(errors[fname]):
         if lineno not in blame[fname]:
             del(errors[fname][lineno])
+    if not errors[fname]:
+        del(errors[fname])
 
 if not errors:
     sys.exit(0)
