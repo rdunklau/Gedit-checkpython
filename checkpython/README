@@ -5,6 +5,9 @@ Currently checks:
   - pep8 conformance with the pep8 module
   - basic checks using pyflakes
 
+If you have gedit version <=3.10 use the gedit-3.10 branch
+Current master is for gedit version>=3.14 - though autochecking does not work - only Ctrl-Shift-E or click through Tools menu
+
 There is also git pre-commit hook in tools-git directory which validates PEP8/pylint
 code in similar way as this plugin with two differences:
 1. it validates all committed .py files

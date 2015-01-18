@@ -84,7 +84,7 @@ class Pep8Checker(PyChecker):
         except:
             pass
         finally:
-            sys.stderr, err_result = old_stderr, sys.stderr
+            sys.stderr = old_stderr
             sys.stdout, result = old_stdout, sys.stdout
         result.seek(0)
         pep8regexpr = r'([^:]*):(\d*):(\d*): (\w\d*) (.*)'
@@ -112,9 +112,9 @@ class PyFlakesChecker(PyChecker):
         except:
             try:
                 value = sys.exc_info()[1]
-                lineno, offset, line = value.args[1][1:]
+                lineno, offset = value.args[1][1:3]
             except IndexError:
-                lineno, offset, line = 1, 0, ''
+                lineno, offset = 1, 0
             yield Message(ERROR, 'E', lineno, str(value), offset)
         else:
             messages = flakeschecker.Checker(tree, name).messages

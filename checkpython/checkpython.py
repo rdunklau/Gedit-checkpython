@@ -1,6 +1,8 @@
-from gi.repository import GObject, Gedit, Gtk, GdkPixbuf
+# -*- coding: utf-8 -*-
 
-import checkers
+from gi.repository import GLib, GObject, Gedit, Gtk, GdkPixbuf, Gio, Pango
+
+from checkpython import checkers
 
 
 UI_XML = """<ui>
@@ -19,55 +21,78 @@ UI_XML = """<ui>
 </ui>"""
 
 
-class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
-    __gtype_name = 'Pep8Plugin'
-    window = GObject.property(type=Gedit.Window)
-    default_autocheck = False
+class CheckpythonAppActivatable(GObject.Object, Gedit.AppActivatable):
+
+    app = GObject.property(type=Gedit.App)
 
     def __init__(self):
-        super(Pep8Plugin, self).__init__()
-        self.handlers = []
+        GObject.Object.__init__(self)
+
+    def do_activate(self):
+        self.app.add_accelerator("<Primary><Shift>E", "win.checkpython", None)
+
+        self.menu_ext = self.extend_menu("tools-section")
+        item = Gio.MenuItem.new(_("Check Python"), "win.checkpython")
+        self.menu_ext.append_menu_item(item)
+
+    def do_deactivate(self):
+        self.app.remove_accelerator("win.checkpython", None)
+        self.menu_ext = None
+
+
+class CheckpythonWindowActivatable(GObject.Object, Gedit.WindowActivatable):
+    __gtype_name = 'CheckpythonWindowActivatable'
+    window = GObject.property(type=Gedit.Window)
+    default_autocheck = False
 
     def do_activate(self):
         # TODO: make this configurable
         self.checkers = [checkers.Pep8Checker(), checkers.PyFlakesChecker()]
-        self.init_ui()
-        handler = self.window.connect("tab-added", self.on_tab_added)
-        handler = self.window.connect("active-tab-changed", self.on_tab_added)
-        self.handlers.append((self.window, handler))
-        [self._watch_doc(doc) for doc in self.window.get_documents()]
+
+        action = Gio.SimpleAction(name="checkpython")
+        action.connect('activate', self.check_all)
+        self.window.add_action(action)
+
+        for view in self.window.get_views():
+            self.add_helper(view, self.window)
+
+        self.doc_handlers = []
+        self.handlers = [
+            self.window.connect("tab-added", self.on_tab_added),
+            self.window.connect("active-tab-changed", self.on_tab_added1),
+        ]
+
+        self._init_menu()
+        self._init_error_list()
+
+    def activate_toggle(self, action, parameter):
+        state = action.get_state()
+        action.change_state(GLib.Variant.new_boolean(not state.get_boolean()))
 
     def on_tab_added(self, window, tab, data=None):
+        self._watch_doc(tab.get_document())
+
+    def on_tab_added1(self, window, tab, data=None):
         self._watch_doc(tab.get_document())
 
     def _watch_doc(self, doc):
         handler = doc.connect("save", self.on_document_save)
         handler = doc.connect("loaded", self.on_document_save)
-        self.handlers.append((doc, handler))
+        self.doc_handlers.append((doc, handler))
 
     def do_deactivate(self):
-        self.remove_ui()
-        for obj, handler in self.handlers:
-            obj.disconnect(handler)
+        for h in self.handlers:
+            self.window.disconnect(h)
+        for doc, h in self.doc_handlers:
+            doc.disconnect(h)
 
     def do_update_states(self):
         pass
-
-    def remove_ui(self):
-        manager = self.window.get_ui_manager()
-        manager.remove_ui(self._ui_merge_id)
-        manager.remove_action_group(self._actions)
-        manager.ensure_update()
-
-    def init_ui(self):
-        self._init_menu()
-        self._init_error_list()
 
     def toggle_autocheck(self, action):
         pass
 
     def _init_menu(self):
-        manager = self.window.get_ui_manager()
         self._actions = Gtk.ActionGroup('Pep8Actions')
         self._actions.add_actions([
             ('PEP8menu', Gtk.STOCK_INFO, "Python check", None,
@@ -84,19 +109,18 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
         self.autocheck.set_active(self.default_autocheck)
         self.autocheck.connect("toggled", self.toggle_autocheck)
         self._actions.add_action(self.autocheck)
-        manager.insert_action_group(self._actions)
-        self._ui_merge_id = manager.add_ui_from_string(UI_XML)
-        manager.ensure_update()
+        # self._ui_merge_id = manager.add_ui_from_string(UI_XML)
 
     def _init_error_list(self):
         self.error_list = ErrorListView()
-        icon = Gtk.Image.new_from_stock(Gtk.STOCK_YES, Gtk.IconSize.MENU)
         panel = self.window.get_side_panel()
-        sw = Gtk.ScrolledWindow()
-        sw.add(self.error_list)
+        panel.add_titled(
+            self.error_list,
+            "Checkpython",
+            "Checkpython",
+        )
+
         self.error_list.connect("row-activated", self.on_row_click)
-        panel.add_item(sw, "Pep 8 conformance", "Pep8 conformance", icon)
-        panel.activate_item(sw)
         self.error_list.show_all()
 
     def on_document_save(self, document, *args, **kwargs):
@@ -112,6 +136,8 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
         for checker in self.checkers:
             for message in checker.check(name, content):
                 self.error_list.append_message(message)
+        panel = self.window.get_side_panel()
+        panel.set_visible_child(panel.get_child_by_name('Checkpython'))
 
     def _get_all_text(self):
         view = self.window.get_active_view()
@@ -128,7 +154,7 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
     def on_row_click(self, tree_view, path, view=None):
         doc = self.window.get_active_document()
         lineno = self.error_list.props.model[path.get_indices()[0]]
-        line_iter = doc.get_iter_at_line(lineno[2] - 1)
+        line_iter = doc.get_iter_at_line(int(lineno[2]) - 1)
         self.window.get_active_view().get_buffer().place_cursor(line_iter)
         self.window.get_active_view().scroll_to_iter(
             line_iter, 0, False, 0, 0.3)
@@ -137,44 +163,42 @@ class Pep8Plugin(GObject.Object, Gedit.WindowActivatable):
 class ErrorListView(Gtk.TreeView):
 
     def __init__(self):
-        super(ErrorListView, self).__init__()
-        self.set_model(
-            Gtk.ListStore(
-                GdkPixbuf.Pixbuf,  # type
-                GObject.TYPE_STRING,  # code
-                GObject.TYPE_INT,  # line
-                GObject.TYPE_STRING,  # message
-            )
+        Gtk.TreeView.__init__(self)
+        self.icontheme = Gtk.IconTheme.get_default()
+        self.model = Gtk.ListStore(
+            GdkPixbuf.Pixbuf,  # type
+            GObject.TYPE_STRING,  # code
+            GObject.TYPE_STRING,  # line
+            GObject.TYPE_STRING,  # message
         )
 
-        self.set_headers_visible(True)
-
-        type_column = Gtk.TreeViewColumn('type')
-        typecell = Gtk.CellRendererPixbuf()
-        type_column.pack_start(typecell, False)
+        type_renderer = Gtk.CellRendererPixbuf()
+        type_column = Gtk.TreeViewColumn('', type_renderer, pixbuf=0)
         self.append_column(type_column)
-        type_column.add_attribute(typecell, "pixbuf", 0)
 
-        code_column = Gtk.TreeViewColumn('code')
-        codecell = Gtk.CellRendererText()
-        code_column.pack_start(codecell, False)
+        code_renderer = Gtk.CellRendererText()
+        code_column = Gtk.TreeViewColumn('Code', code_renderer, text=1)
         self.append_column(code_column)
-        code_column.add_attribute(codecell, "text", 1)
         self.set_common_column_properties(code_column, 1)
 
-        lineno_column = Gtk.TreeViewColumn('Line')
-        lineno_cell = Gtk.CellRendererText()
-        lineno_column.pack_start(lineno_cell, False)
+        lineno_renderer = Gtk.CellRendererText()
+        lineno_column = Gtk.TreeViewColumn('Line', lineno_renderer, text=2)
         self.append_column(lineno_column)
-        lineno_column.add_attribute(lineno_cell, "text", 2)
         self.set_common_column_properties(lineno_column, 2)
 
-        message_column = Gtk.TreeViewColumn('Message')
-        message_cell = Gtk.CellRendererText()
-        message_column.pack_start(message_cell, False)
+        message_renderer = Gtk.CellRendererText()
+        message_renderer.set_property('ellipsize', Pango.EllipsizeMode.END)
+        message_column = Gtk.TreeViewColumn(
+            'Message',
+            message_renderer,
+            text=3,
+        )
         self.append_column(message_column)
-        message_column.add_attribute(message_cell, "text", 3)
         self.set_common_column_properties(message_column, 3)
+
+        self.set_headers_visible(True)
+        self.set_model(self.model)
+
         self._icons = {
             checkers.ERROR: self._get_icon_as_pixbuf('dialog-error'),
             checkers.WARNING: self._get_icon_as_pixbuf('dialog-warning'),
@@ -193,11 +217,11 @@ class ErrorListView(Gtk.TreeView):
         column.set_sort_column_id(idx)
 
     def append_message(self, message):
-        self.props.model.append((
+        self.model.append([
             self._icons[message.err_type],
             message.err_code,
-            message.line,
-            message.message))
+            "{:0>4}".format(message.line),
+            message.message])
 
     def clear(self):
-        self.props.model.clear()
+        self.model.clear()

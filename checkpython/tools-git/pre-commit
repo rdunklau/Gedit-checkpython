@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+
+# Simple Python script - example of git pre-commit hook
+
+import os
+import re
+import subprocess
+import sys
+
+# lines by persons below are taken into account
+# other lines are skipped
+# TODO move to .ini file
+us = {
+    b'not.committed.yet',
+    b'Mickey.Mouse@fairytale.land'
+}
+
+# add checkers.py location and to import path
+sys.path.insert(
+    0,
+    os.environ['HOME']+'/.local/share/gedit/plugins/Gedit-checkpython'
+)
+
+from checkers import AllCheckers
+
+
+def cmd_stdout_nonempty_list(cmd):
+    return [
+        i
+        for i in subprocess.check_output(cmd).split(b'\n')
+        if i
+    ]
+
+
+def main():
+    checker = AllCheckers(pep8ignore=['W391'])
+    # list of files in current commit
+    filelist = [
+        i
+        for i in cmd_stdout_nonempty_list(
+            ['git', 'diff', '--staged', '--name-only']
+        )
+        if i.endswith(b'.py')
+    ]
+
+    errors = {}  # errors grupped by filename and lineno
+    for filename, message in checker.check_list_of_files(filelist):
+        lineno = message.line
+        errors.setdefault(filename, {}).setdefault(lineno, []).append(
+            (message.err_code, message.message)
+        )
+
+    regitblame = re.compile(
+        rb'\S+\s\(<(?P<email>[^>]+)'
+        rb'[^)]+\s(?P<lineno>\d+)(?P<rest>.*)'
+    )
+    # dictionary stores lines changed by us for each changed file
+    blame_line_numbers = {}
+    for filename in errors:
+        blame_lines = cmd_stdout_nonempty_list(
+            ['git', 'blame', '-e', filename]
+        )
+        for line in blame_lines:
+            m = regitblame.match(line)
+            if not m:
+                continue
+            d = m.groupdict()
+            if d['email'] not in us:
+                continue
+            lineno = int(d['lineno'])
+            blame_line_numbers.setdefault(filename, set()).add(lineno)
+
+    # remove errors for lines not changed by us
+    for filename in list(errors):
+        if filename not in blame_line_numbers:
+            del(errors[filename])
+        for lineno in list(errors[filename]):
+            if lineno not in blame_line_numbers[filename]:
+                del(errors[filename][lineno])
+        if not errors[filename]:
+            del(errors[filename])
+
+    if not errors:
+        sys.exit(0)
+
+    print(" *** Files in the commit do not pass PEP8/pylint validation ***")
+
+    for filename in sorted(errors):
+        for lineno in sorted(errors[filename]):
+            for message in errors[filename][lineno]:
+                print("{0}:{1} {2[0]} {2[1]}".format(
+                    filename.decode('utf8'),
+                    lineno,
+                    message
+                ))
+    print(" *** Open problematic files with:")
+    print("$EDITOR {}".format(b" ".join(errors).decode('utf8')))
+    print(" *** Skip this check with git commit -n")
+    sys.exit(1)
+
+if __name__ == "__main__":
+    main()
