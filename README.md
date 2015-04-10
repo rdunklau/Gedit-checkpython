@@ -21,8 +21,8 @@ Installation
 You will need both the pep8 and pyflakes modules, available from pypi.
 
 ```
-  pip install pyflakes
-  pip install pep8
+  pip3 install pyflakes
+  pip3 install pep8
 ```
 
 Copy (or clone) this repository in your gedit plugins directory (create it if it
