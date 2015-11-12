@@ -32,9 +32,6 @@ class CheckpythonWindowActivatable(GObject.Object, Gedit.WindowActivatable):
         action.connect('activate', self.check_all)
         self.window.add_action(action)
 
-        for view in self.window.get_views():
-            self.add_helper(view, self.window)
-
         self._init_error_list()
 
     def _init_error_list(self):
