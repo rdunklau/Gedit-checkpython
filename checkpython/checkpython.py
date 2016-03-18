@@ -53,7 +53,15 @@ class CheckpythonWindowActivatable(GObject.Object, Gedit.WindowActivatable):
             for message in checker.check(name, content):
                 self.error_list.append_message(message)
         panel = self.window.get_side_panel()
-        panel.set_visible_child(panel.get_child_by_name('Checkpython'))
+        try:
+            child = panel.get_child_by_name('Checkpython')
+        except AttributeError:
+            child = [
+                i
+                for i in panel.get_children()
+                if i.get_name() == 'checkpython+checkpython+ErrorListView'
+            ][0]
+        panel.set_visible_child(child)
 
     def _get_all_text(self):
         view = self.window.get_active_view()
@@ -96,7 +104,6 @@ class ErrorListView(Gtk.TreeView):
             column.set_reorderable(True)
             column.set_sort_column_id(opts['text'])
 
-
     def __init__(self):
         Gtk.TreeView.__init__(self)
         self.model = Gtk.ListStore(
@@ -109,7 +116,7 @@ class ErrorListView(Gtk.TreeView):
         self.append_column('', pixbuf=0)
         self.append_column('Code', text=1)
         self.append_column('Line', text=2)
-        self.append_column('Message', text=3, ellipsize=Pango.EllipsizeMode.END)
+        self.append_column('Msg', text=3, ellipsize=Pango.EllipsizeMode.END)
 
         self.set_headers_visible(True)
         self.set_model(self.model)
@@ -117,6 +124,7 @@ class ErrorListView(Gtk.TreeView):
         # Prepare mapping errors to icons
 
         theme = Gtk.IconTheme.get_default()
+
         def _get_icon(icon):
             return Gtk.IconTheme.load_icon(theme, icon, 16, 0)
 
@@ -136,3 +144,4 @@ class ErrorListView(Gtk.TreeView):
 
     def clear(self):
         self.model.clear()
+
