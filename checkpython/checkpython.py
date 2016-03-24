@@ -32,26 +32,26 @@ class CheckpythonWindowActivatable(GObject.Object, Gedit.WindowActivatable):
         action.connect('activate', self.check_all)
         self.window.add_action(action)
 
-        self._init_error_list()
+        self._init_error_window()
 
-    def _init_error_list(self):
-        self.error_list = ErrorListView()
+    def _init_error_window(self):
+        self.error_window = ErrorWindow()
         panel = self.window.get_side_panel()
         panel.add_titled(
-            self.error_list,
+            self.error_window,
             "Checkpython",
             "Checkpython",
         )
-        self.error_list.connect("row-activated", self.on_row_click)
-        self.error_list.show_all()
+        self.error_window.connect_row_click(self.on_row_click)
+        self.error_window.show_all()
 
     def check_all(self, action, data=None):
-        self.error_list.clear()
+        self.error_window.clear()
         name, content = self._get_all_text()
         self.window.get_side_panel().set_property('visible', True)
         for checker in self.checkers:
             for message in checker.check(name, content):
-                self.error_list.append_message(message)
+                self.error_window.append_message(message)
         panel = self.window.get_side_panel()
         try:
             child = panel.get_child_by_name('Checkpython')
@@ -77,14 +77,36 @@ class CheckpythonWindowActivatable(GObject.Object, Gedit.WindowActivatable):
 
     def on_row_click(self, tree_view, path, view=None):
         doc = self.window.get_active_document()
-        lineno = self.error_list.props.model[path.get_indices()[0]]
+        lineno = self.error_window.get_lineno(path)
         line_iter = doc.get_iter_at_line(int(lineno[2]) - 1)
         self.window.get_active_view().get_buffer().place_cursor(line_iter)
         self.window.get_active_view().scroll_to_iter(
             line_iter, 0, False, 0, 0.3)
 
 
+class ErrorWindow(Gtk.ScrolledWindow):
+    def __init__(self):
+        Gtk.ScrolledWindow.__init__(self)
+        self.error_list = ErrorListView()
+        self.add_with_viewport(self.error_list)
+
+    def clear(self):
+        self.error_list.clear()
+
+    def get_lineno(self, path):
+        return self.error_list.get_lineno(path)
+
+    def append_message(self, message):
+        return self.error_list.append_message(message)
+
+    def connect_row_click(self, signal):
+        self.error_list.connect("row-activated", signal)
+
+
 class ErrorListView(Gtk.TreeView):
+
+    def get_lineno(self, path):
+        return self.props.model[path.get_indices()[0]]
 
     def append_column(self, name, **opts):
         if 'text' in opts:
