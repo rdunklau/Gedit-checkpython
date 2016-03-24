@@ -71,6 +71,14 @@ class Pep8Checker(PyChecker):
             lines.append('')
         else:
             lines[-1] = lines[-1] + '\n'
+        # issue #6 - skip noqa
+        lines = [
+            line if not (
+                line.strip().endswith('# noqa')
+                or line.strip().endswith('# flake8: noqa')
+            ) else '#'
+            for line in lines
+        ]
         old_stderr, sys.stderr = sys.stderr, StringIO()
         old_stdout, sys.stdout = sys.stdout, StringIO()
         try:
