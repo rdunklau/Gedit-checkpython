@@ -44,3 +44,5 @@ or
 Pre-commit hook installation:
 
 ln -s ~/.local/share/gedit/plugins/Gedit-checkpython/tools-git/pre-commit {MyProjectDirectory}/.git/hooks/
+
+Check pep8 configuration options https://pep8.readthedocs.org/en/latest/intro.html#configuration - you can control this plug with ~/.config/pep8 file now
