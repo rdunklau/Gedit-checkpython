@@ -18,6 +18,8 @@ ERROR = ErrTypes()
 WARNING = ErrTypes()
 STYLE = ErrTypes()
 
+rePEP8 = re.compile(r'([^:]*):(\d*):(\d*): (\w\d*) (.*)')
+
 
 class Message(object):
 
@@ -77,6 +79,11 @@ class Pep8Checker(PyChecker):
 
     def check(self, name, content):
         lines = content.splitlines(True)
+        # workaround - gedit always adds \n to the last line on save
+        if content.endswith('\n'):
+            lines.append('')
+        else:
+            lines[-1] = lines[-1] + '\n'
         old_stderr, sys.stderr = sys.stderr, StringIO()
         old_stdout, sys.stdout = sys.stdout, StringIO()
         try:
@@ -87,12 +94,12 @@ class Pep8Checker(PyChecker):
             sys.stderr = old_stderr
             sys.stdout, result = old_stdout, sys.stdout
         result.seek(0)
-        pep8regexpr = r'([^:]*):(\d*):(\d*): (\w\d*) (.*)'
         errors = [
-            re.match(pep8regexpr, line)
+            rePEP8.match(line)
             for line in result.readlines()
             if line
         ]
+        errors = [e for e in errors if e]
         for match in sorted(errors, key=lambda x: x.group(2)):
             lineno = int(match.group(2))
             text = match.group(5)
@@ -141,4 +148,3 @@ class AllCheckers(PyChecker):
     def check(self, name, content):
         for checker in self.checkers:
             yield from checker.check(name, content)
-

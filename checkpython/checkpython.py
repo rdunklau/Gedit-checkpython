@@ -144,4 +144,3 @@ class ErrorListView(Gtk.TreeView):
 
     def clear(self):
         self.model.clear()
-
