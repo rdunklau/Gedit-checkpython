@@ -7,7 +7,6 @@ import re
 import sys
 from io import StringIO
 
-from optparse import OptionParser
 from pyflakes import checker as flakeschecker
 
 
@@ -62,20 +61,8 @@ class Pep8Checker(PyChecker):
     """A checker for the Pep8."""
 
     def __init__(self, ignore=[]):
-        self.options = pep8.StyleGuide().options
+        self.options = pep8.StyleGuide(config_file=True).options
         self.options.ignore += tuple(ignore)
-
-        # TODO: make this configurable - below are probably not used at all
-        pep8.options = OptionParser()
-        pep8.options.count = 1
-        pep8.options.select = []
-        pep8.options.show_source = False
-        pep8.options.show_pep8 = False
-        pep8.options.quiet = 0
-        pep8.options.repeat = True
-        pep8.options.verbose = 0
-        pep8.options.counters = dict.fromkeys(pep8.BENCHMARK_KEYS, 0)
-        pep8.options.messages = {}
 
     def check(self, name, content):
         lines = content.splitlines(True)
