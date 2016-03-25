@@ -2,13 +2,13 @@ Gedit Python checker
 
 A simple gedit plugin for checking python files.
 Currently checks:
-  - pep8 conformance with the pep8 module
+  - pep8 conformance with the pycodestyle(former pep8) module
   - basic checks using pyflakes
 
 If you have gedit version <=3.10 use the gedit-3.10 branch
 Current master is for gedit version>=3.14 - though autochecking does not work - only Ctrl-Shift-E or click through Tools menu
 
-There is also git pre-commit hook in tools-git directory which validates PEP8/pylint
+There is also git pre-commit hook in tools-git directory which validates pycodestyle/pylint
 code in similar way as this plugin with two differences:
 1. it validates all committed .py files
 2. empty ending line is not validated
@@ -18,11 +18,11 @@ on given list
 
 Installation
 
-You will need both the pep8 and pyflakes modules, available from pypi.
+You will need both the pycodestyle(former pep8) and pyflakes modules, available from pypi.
 
 ```
   pip3 install pyflakes
-  pip3 install pep8
+  pip3 install pycodestyle # pep8 on older distros
 ```
 
 Copy (or clone) this repository in your gedit plugins directory (create it if it

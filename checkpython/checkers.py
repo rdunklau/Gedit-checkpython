@@ -1,6 +1,9 @@
 import abc
 import ast
-import pep8
+try:
+    import pycodestyle
+except ImportError:
+    import pep8 as pycodestyle
 
 import re
 
@@ -17,7 +20,7 @@ ERROR = ErrTypes()
 WARNING = ErrTypes()
 STYLE = ErrTypes()
 
-rePEP8 = re.compile(r'([^:]*):(\d*):(\d*): (\w\d*) (.*)')
+rePycodestyle = re.compile(r'([^:]*):(\d*):(\d*): (\w\d*) (.*)')
 
 
 class Message(object):
@@ -57,11 +60,11 @@ class PyChecker(object):
                 yield filename, message
 
 
-class Pep8Checker(PyChecker):
-    """A checker for the Pep8."""
+class PycodestyleChecker(PyChecker):
+    """A checker for the Pycodestyle."""
 
     def __init__(self, ignore=[]):
-        self.options = pep8.StyleGuide(config_file=True).options
+        self.options = pycodestyle.StyleGuide(config_file=True).options
         self.options.ignore += tuple(ignore)
 
     def check(self, name, content):
@@ -82,7 +85,11 @@ class Pep8Checker(PyChecker):
         old_stderr, sys.stderr = sys.stderr, StringIO()
         old_stdout, sys.stdout = sys.stdout, StringIO()
         try:
-            pep8.Checker(name, lines=lines, options=self.options).check_all()
+            pycodestyle.Checker(
+                name,
+                lines=lines,
+                options=self.options
+            ).check_all()
         except:
             pass
         finally:
@@ -90,7 +97,7 @@ class Pep8Checker(PyChecker):
             sys.stdout, result = old_stdout, sys.stdout
         result.seek(0)
         errors = [
-            rePEP8.match(line)
+            rePycodestyle.match(line)
             for line in result.readlines()
             if line
         ]
@@ -134,9 +141,9 @@ class PyFlakesChecker(PyChecker):
 
 class AllCheckers(PyChecker):
 
-    def __init__(self, pep8ignore=[]):
+    def __init__(self, pycodestyleignore=[]):
         self.checkers = [
-            Pep8Checker(ignore=list(pep8ignore)),
+            PycodestyleChecker(ignore=list(pycodestyleignore)),
             PyFlakesChecker(),
         ]
 

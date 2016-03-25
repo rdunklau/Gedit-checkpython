@@ -26,7 +26,7 @@ class CheckpythonWindowActivatable(GObject.Object, Gedit.WindowActivatable):
 
     def do_activate(self):
         # TODO: make this configurable
-        self.checkers = [checkers.Pep8Checker(), checkers.PyFlakesChecker()]
+        self.checkers = [checkers.PycodestyleChecker(), checkers.PyFlakesChecker()]
 
         action = Gio.SimpleAction(name="checkpython")
         action.connect('activate', self.check_all)

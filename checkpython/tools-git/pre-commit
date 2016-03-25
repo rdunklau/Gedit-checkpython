@@ -33,7 +33,7 @@ def cmd_stdout_nonempty_list(cmd):
 
 
 def main():
-    checker = AllCheckers(pep8ignore=['W391'])
+    checker = AllCheckers(pycodestyleignore=['W391'])
     # list of files in current commit
     filelist = [
         i
@@ -83,7 +83,7 @@ def main():
     if not errors:
         sys.exit(0)
 
-    print(" *** Files in the commit do not pass PEP8/pylint validation ***")
+    print(" *** Files in the commit do not pass pycodestyle/pylint validation ***")
 
     for filename in sorted(errors):
         for lineno in sorted(errors[filename]):

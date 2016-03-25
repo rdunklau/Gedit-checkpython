@@ -3,8 +3,8 @@ Loader=python3
 Module=checkpython
 IAge=3
 Name=Check Python
-Description=A pep8 conformance and Pyflakes checker, requires gedit>=3.14
+Description=A pycodestyle conformance and Pyflakes checker, requires gedit>=3.14
 Authors=Ronan Dunklau, migration to Python3 by Jacek Pliszka
 Copyright=GPLv2
 Website=https://github.com/rdunklau/Gedit-checkpython
-Version=0.0.4
+Version=0.0.5
